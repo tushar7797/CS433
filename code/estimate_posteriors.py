@@ -1,13 +1,46 @@
-import numpy as np
-
 import jax
 import jax.numpy as jnp
 
+import latenta
+import latento
+
+import numpy as np
 import numpyro
 import numpyro.infer.autoguide
-import tqdm.auto as tqdm
+
+import pickle
 
 import seaborn as sns
+from scipy import stats
+
+import tqdm.auto as tqdm
+
+
+def create_dataset(config):
+    # creates the toy
+    toy = latenta.toy.wrap.cases.get_case(config)
+    
+    # sample the count data
+    latenta.toy.sample.sample(toy)
+    
+    # create a dataset object out of this
+    dataset = latenta.toy.wrap.wrap_model(toy)
+    
+    # create a "latento" dataset (=numpyro) instead of a "latenta" (=pyro) one
+    dataset = latento.dataset.PerturbedDataset.from_latenta(dataset)
+    
+    return dataset
+
+
+def save_pickle(object_, object_dir):
+    with open(object_dir, 'wb') as output:
+        pickle.dump(object_, output, pickle.HIGHEST_PROTOCOL)
+
+
+def load_pickle(object_dir):
+    with open(object_dir, 'rb') as input:
+        object_pkl = pickle.load(input)
+    return object_pkl
 
 
 def transform_dataset(dataset):
@@ -140,3 +173,40 @@ def train_sample_vi(model, infer_args, rng_key, step_size=0.01, n_iterations = 1
   samples_vi = sample_vi(model, guide, svi, current_state, num_samples)
   
   return samples_vi
+  
+  
+#Calculating Pearson correlation by comparing a set of distributions for a given model and gene
+def mcmc_pearson_correlation(mcmc_models_dists, dataset, cor_threshold=0.5, p_threshold=0.05, save_path=''):
+
+  str_log_list=[]
+  count = 0
+
+  for model in mcmc_models_dists:
+    for index_1, dist_1 in enumerate(model[1]):
+      for index_2, dist_2 in enumerate(model[1]):
+        if index_2>index_1:
+          for index_gene, gene_ix in enumerate(dataset.var['gene_ix']):
+            count+=1
+            samples_mcmc_1 = model[0]['transcriptome/'+dist_1][:, gene_ix]
+            samples_mcmc_2 = model[0]['transcriptome/'+dist_2][:, gene_ix]
+            pearson_cor = stats.pearsonr(samples_mcmc_1, samples_mcmc_2)
+
+            if (np.abs(pearson_cor[0])>=cor_threshold) and (pearson_cor[1]<=p_threshold):
+              gene_ix_name = dataset.var.loc[dataset.var['gene_ix'] == gene_ix].index[0]
+              str_log = f'{model[2]}, {dist_1} vs. {dist_2}, {gene_ix_name}: cor={pearson_cor[0]}, p={pearson_cor[1]}'
+              str_log_list.append(str_log)
+              
+  print(f'Calculating Pearson correlation by comparing a set of distributions for a given model and gene:')
+  print(f'cor_threshold={cor_threshold} and p_threshold={p_threshold}')
+  print(f'Pearson correlations found: {len(str_log_list)} out of {count} total combinations')
+
+  if save_path != '':
+    with open(save_path, 'w') as f:
+        print(f"Log file saved in dir: {save_path}")
+        f.write(f'Calculating Pearson correlation by comparing a set of distributions for a given model and gene:\n')
+        f.write(f'cor_threshold={cor_threshold} and p_threshold={p_threshold}\n')
+        f.write(f'Pearson correlations found: {len(str_log_list)} out of {count} total combinations\n')
+        for cor in str_log_list:
+            f.write("%s\n" % cor)
+        
+  return str_log_list, count

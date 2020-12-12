@@ -1,0 +1,46 @@
+Calculating Pearson correlation by comparing a set of distributions for a given model and gene:
+cor_threshold=0.5 and p_threshold=0.05
+Pearson correlations found: 43 out of 300 total combinations
+Linear model, freq vs. perturb/beta, nothing_1: cor=-0.6503689991848683, p=7.377886545215124e-241
+Linear model, freq vs. perturb/beta, nothing_2: cor=-0.6409605043632192, p=8.214080950919986e-232
+Linear model, freq vs. perturb/beta, nothing_3: cor=-0.5907062718647704, p=1.9555558952733392e-188
+Linear model, freq vs. perturb/beta, nothing_4: cor=-0.5954067230676194, p=3.602213141102897e-192
+Linear model, freq vs. perturb/beta, nothing_5: cor=-0.6180719528872829, p=4.452472430804328e-211
+Linear model, freq vs. perturb/beta, nothing_6: cor=-0.6324149988769717, p=7.251551825817286e-224
+Linear model, freq vs. perturb/beta, nothing_7: cor=-0.6206774038156183, p=2.371167782525305e-213
+Linear model, freq vs. perturb/beta, nothing_8: cor=-0.5765665571484191, p=1.4563697628927004e-177
+Linear model, freq vs. perturb/beta, nothing_9: cor=-0.6121714235740829, p=5.239951790871589e-206
+Linear model, freq vs. perturb/beta, nothing_10: cor=-0.622426535541322, p=6.862721023651229e-215
+Linear model, freq vs. perturb/beta, x_linear_up_11: cor=-0.7400147022108736, p=0.0
+Linear model, freq vs. perturb/beta, x_linear_up_12: cor=-0.7143898391277661, p=3.897618147424e-312
+Linear model, freq vs. perturb/beta, x_linear_up_13: cor=-0.7828030554371581, p=0.0
+Linear model, freq vs. perturb/beta, x_linear_up_16: cor=-0.735340075885085, p=0.0
+Linear model, freq vs. perturb/beta, x_linear_up_18: cor=-0.7538483456563911, p=0.0
+Linear model, freq vs. perturb/beta, x_linear_up_20: cor=-0.7232144121394088, p=2e-323
+Linear model, freq vs. perturb/beta, switch_up_23: cor=-0.6345955853712888, p=7.189471809537114e-226
+Linear model, freq vs. perturb/beta, switch_up_26: cor=-0.6534278203019386, p=7.192153665346813e-244
+Linear model, freq vs. perturb/beta, switch_up_29: cor=-0.7302130507051067, p=0.0
+Switch model, freq vs. perturb/beta, nothing_1: cor=-0.5726167999667805, p=1.2770177155445607e-174
+Switch model, freq vs. perturb/beta, x_linear_up_11: cor=-0.7404122756849751, p=0.0
+Switch model, freq vs. perturb/beta, x_linear_up_12: cor=-0.7754419180757485, p=0.0
+Switch model, freq vs. perturb/beta, x_linear_up_13: cor=-0.83583709129657, p=0.0
+Switch model, freq vs. perturb/beta, x_linear_up_16: cor=-0.7336886397536775, p=0.0
+Switch model, freq vs. perturb/beta, x_linear_up_18: cor=-0.7874592736018611, p=0.0
+Switch model, freq vs. perturb/beta, x_linear_up_20: cor=-0.7185516219562141, p=1.8693804e-317
+Switch model, freq vs. perturb/beta, switch_up_26: cor=-0.5076546982005516, p=1.76403868685378e-131
+Switch model, freq vs. perturb/beta, switch_up_29: cor=-0.6120884812420315, p=6.163696331980781e-206
+Switch model, freq vs. switch, nothing_1: cor=0.6073113688607956, p=6.546392377676189e-202
+Switch model, freq vs. switch, nothing_2: cor=0.5107206244542485, p=2.6008663614547815e-133
+Switch model, freq vs. switch, x_linear_up_11: cor=0.5156100926078272, p=2.854044627439355e-136
+Switch model, freq vs. switch, x_linear_up_16: cor=0.5556731591816104, p=1.938966841955682e-162
+Switch model, freq vs. switch, x_linear_up_20: cor=0.5630900271910781, p=1.1018383415917886e-167
+Switch model, perturb/beta vs. switch, nothing_1: cor=-0.6255441934193446, p=1.1747461974955659e-217
+Switch model, perturb/beta vs. switch, nothing_5: cor=-0.5424678747943801, p=2.0219842520506994e-153
+Switch model, perturb/beta vs. switch, nothing_8: cor=0.5000194917869061, p=5.331853890965397e-127
+Switch model, perturb/beta vs. switch, switch_down_21: cor=-0.8924370498387686, p=0.0
+Switch model, perturb/beta vs. switch, switch_down_22: cor=-0.8916381419498984, p=0.0
+Switch model, perturb/beta vs. switch, switch_down_24: cor=-0.9106351068494363, p=0.0
+Switch model, perturb/beta vs. switch, switch_down_25: cor=-0.8376616092975483, p=0.0
+Switch model, perturb/beta vs. switch, switch_down_27: cor=-0.8588123610419037, p=0.0
+Switch model, perturb/beta vs. switch, switch_down_28: cor=-0.8646127540578539, p=0.0
+Switch model, perturb/beta vs. switch, switch_up_30: cor=-0.5097782653471146, p=9.550279246280494e-133

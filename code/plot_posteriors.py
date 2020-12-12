@@ -1,6 +1,9 @@
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
+import numpyro
+import seaborn as sns
+import scpyro
 
 
 def get_dist_mcmc(name, gene_ix, samples_mcmc):
@@ -46,7 +49,7 @@ def print_MCMC_VI_single_variable(dist_type, model_name, samples_mcmc, samples_v
   plt.show()
 
   if save_path != '':
-    fig.savefig(f"{save_path}/{model_name}/{model_name}_{dist_type.replace('/', '-')}.jpg", format= 'jpg', dpi=600)
+    fig.savefig(f"{save_path}/{model_name}/{model_name}_{dist_type.replace('/', '-')}.jpg", format= 'jpg', dpi=200)
     print(f"Figure saved in dir: {save_path}/{model_name}/{model_name}_{dist_type.replace('/', '-')}.jpg")
 
 
@@ -77,7 +80,7 @@ def print_MCMC_VI_two_variables(dist_type1, dist_type2, model_name, samples_mcmc
   plt.show()
   
   if save_path != '':
-    fig.savefig(f"{save_path}/{model_name}/{model_name}_{dist_type1.replace('/', '-')}_{dist_type2.replace('/', '-')}.jpg", format= 'jpg', dpi=600)
+    fig.savefig(f"{save_path}/{model_name}/{model_name}_{dist_type1.replace('/', '-')}_{dist_type2.replace('/', '-')}.jpg", format= 'jpg', dpi=200)
     print(f"Figure saved in dir: {save_path}/{model_name}/{model_name}_{dist_type1.replace('/', '-')}_{dist_type2.replace('/', '-')}.jpg")
     
     
@@ -106,5 +109,94 @@ def print_compare_models_MCMC(dist_type, samples_mcmc_list, dataset, save_path='
   plt.show()
 
   if save_path != '':
-    fig.savefig(f"{save_path}/mcmc_all_models_{dist_type.replace('/', '-')}.jpg", format= 'jpg', dpi=600)
+    fig.savefig(f"{save_path}/mcmc_all_models_{dist_type.replace('/', '-')}.jpg", format= 'jpg', dpi=200)
     print(f"Figure saved in dir: {save_path}/mcmc_all_models_{dist_type.replace('/', '-')}.jpg")
+    
+    
+def rho_estimation(model_name, model, samples_mcmc, samples_vi, dataset, rng_key_, infer_args, save_path):
+  
+  model.eval = True
+
+  # to check out our model, we will see how gene expression depends on the perturbation
+  # we do not care about the library so we just fix it to 100
+  design = {
+      "p":jnp.linspace(0, 1, 50),
+      "library":jnp.array([100] * 50)
+  }
+
+  predictive_mcmc = numpyro.infer.Predictive(model.forward, samples_mcmc, return_sites = ["rho"])
+  predictions_mcmc = predictive_mcmc(rng_key_, **design)
+
+  predictive_vi = numpyro.infer.Predictive(model.forward, samples_vi, return_sites = ["rho"])
+  predictions_vi = predictive_vi(rng_key_, **design)
+
+  # which genes do we want to plot
+  gene_ixs = dataset.var['gene_ix'].tolist()
+
+  # plot the models for the genes
+  x = design["p"]
+  Ys = {"vi":predictions_vi["rho"], "mcmc":predictions_mcmc["rho"]}
+  
+  #"#FF4136" = red, "#0074D9"= blue
+  model_colors = {"vi":"#FF4136", "mcmc":"#0074D9"}
+  model_labels = {"vi":"VI", "mcmc":"MCMC"}
+
+  # empirical values
+  x_empirical = infer_args["p"]
+  Y_empirical = dataset.rho.values
+
+  # gold standard values (we have these because this is toy data)
+  x_gs = infer_args["p"]
+  Y_gs = dataset["rho"].values
+
+  rho = dataset
+
+  n_col=5
+  fig, axes = scpyro.plotting.axes_wrap(len(gene_ixs), n_col=n_col)
+  fig.suptitle(model_name+': MCMC vs. VI rho estimation for different types of genes', fontsize=14)
+
+  legend_artists = {}
+  for gene_ix, ax in zip(gene_ixs, axes):
+      # plot models
+      for model_id, Y in Ys.items():
+          y = Y[:, :, gene_ix]
+          
+          color = model_colors[model_id]
+          labels = model_labels[model_id]
+          q_left = [0.99, 0.8, 0.65] # which upper quantiles to plot
+          q = q_left + [0.5] + [round(1 - q, 3) for q in q_left[::-1]] # which quantiles to plot
+          qy = np.quantile(y, q, 0)
+          qmed = qy[len(q_left)]
+
+          for i in range(len(q_left)):
+              artist = ax.fill_between(x, qy[i], qy[-i-1], color = color, lw = 0, alpha = 0.2)
+              pass
+          if gene_ix == len(gene_ixs)-1:
+            artist = ax.plot(x, qmed, color = color, lw = 3, label = labels)
+          else:
+            artist = ax.plot(x, qmed, color = color, lw = 3)
+          legend_artists[model_id] = artist[0]
+          
+      # plot empirical
+      y_empirical = Y_empirical[:, gene_ix]
+      ax.scatter(x_empirical, y_empirical, s = 3, color = "#333333")
+      
+      # plot gold standard
+      y_gs = Y_gs[:, gene_ix]
+      if gene_ix == len(gene_ixs)-1:
+        sns.lineplot(x = x_gs, y = y_gs, ax = ax, color = "green", lw = 4, label = "GS rho") # gold standard rho
+      else:
+        sns.lineplot(x = x_gs, y = y_gs, ax = ax, color = "green", lw = 4)
+
+      ax.set_title(dataset.symbol(feature_ix = gene_ix), fontsize=10)
+
+      if gene_ix >= len(gene_ixs)-n_col:
+        ax.set_xlabel('Perturbation', fontsize=12)
+      if gene_ix % n_col == 0:
+        ax.set_ylabel('rho', fontsize=12)
+
+  fig.legend(legend_artists, loc='upper right')
+  
+  if save_path != '':
+    fig.savefig(f"{save_path}/{model_name}/{model_name}_rho_estimation.jpg", format= 'jpg', dpi=200)
+    print(f"Figure saved in dir: {save_path}/{model_name}/{model_name}_rho_estimation.jpg")
