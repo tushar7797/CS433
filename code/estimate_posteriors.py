@@ -1,3 +1,8 @@
+# This script contains functions to:
+# 1. Generate-save-load-transform the dataset
+# 2. Approximate and sample the posterior with MCMC-NUTS and SVI
+# 3. Compute Pearson correlations between model parameters
+
 import jax
 import jax.numpy as jnp
 
@@ -16,6 +21,9 @@ from scipy import stats
 import tqdm.auto as tqdm
 
 
+"""Generates a synthetic dataset that contains information about the gene expression of each cell 
+given a configuration JSON parameter. The configuration describes the number of cells and the 
+characteristics of the gene expression. """
 def create_dataset(config):
     # creates the toy
     toy = latenta.toy.wrap.cases.get_case(config)
@@ -32,17 +40,23 @@ def create_dataset(config):
     return dataset
 
 
+""" This function is used to save data structures as pickle objects. 
+We use this to save generated datasets and trained models. """
 def save_pickle(object_, object_dir):
     with open(object_dir, 'wb') as output:
         pickle.dump(object_, output, pickle.HIGHEST_PROTOCOL)
 
 
+""" This function is used to load pickle objects to the appropriate data structures. 
+We use this to load generated datasets and trained models. """
 def load_pickle(object_dir):
     with open(object_dir, 'rb') as input:
         object_pkl = pickle.load(input)
     return object_pkl
 
 
+"""This function packs together in a JSON format the necessary variables for the different
+types of models. Cell perturbation values are log transformed and scaled to max [0 1]."""
 def transform_dataset(dataset):
   # we don't use the raw perturbation values, but use log (x + 1) transformed ones
   p = np.log(dataset.perturb.X["x"].values + 1)
@@ -56,6 +70,7 @@ def transform_dataset(dataset):
   return infer_args
   
   
+"""Function used to estimate the exact posterior with Marchov Chain Monte Calro and NUTS sampler."""
 def train_mcmc(model, infer_args, rng_key, num_warmup=1000, num_samples=2000):
   model.eval = False
 
@@ -67,6 +82,7 @@ def train_mcmc(model, infer_args, rng_key, num_warmup=1000, num_samples=2000):
   return mcmc
 
 
+"""Function used to generate samples from the posterior approximated by MCMC-NUTS."""
 def sample_mcmc(model, mcmc):
   # get the samples from the posterior
   model.eval = True
@@ -75,7 +91,10 @@ def sample_mcmc(model, mcmc):
   return samples_mcmc
   
   
+"""Function used to approximate and derive samples from a posterior distribution by using MCMC-NUTS sampler."""
 def train_sample_mcmc(model, infer_args, rng_key, num_warmup=1000, num_samples=2000):
+ 
+  # aproxiamte posterior
   mcmc = train_mcmc(model, infer_args, rng_key, num_warmup, num_samples)
 
   # some statistics of the posterior, the r_hat is a statistic of "convergence" for a particular random variable, this should be close to 1
@@ -87,7 +106,7 @@ def train_sample_mcmc(model, infer_args, rng_key, num_warmup=1000, num_samples=2
   return samples_mcmc
   
   
-####################################### Notes for Vi ####################################### 
+####################################### Notes for Black Box Variational Inference  ####################################### 
 # we define our variational distribution or "guide"
 # we will use the variational distribution to approximate the actual posterior as much as possible
 # this is often a simple distribution from which it is easy to sample, in this case an autodiagonal normal
@@ -106,9 +125,11 @@ def train_sample_mcmc(model, infer_args, rng_key, num_warmup=1000, num_samples=2
 # normal distribution, the guide will take e^x as the value of the dispersion similarly, for the freq, this is only defined in [0, 1], so the guide will take the logit
 # this is all done under the hood for you by the autoguide function, base on the support of the prior distribution
 # guide = numpyro.infer.autoguide.AutoDiagonalNormal(model.forward, init_loc_fn=numpyro.infer.init_to_feasible)
-####################################### Notes for Vi ####################################### 
+####################################### Notes for Black Box Variational Inference  ####################################### 
 
 
+"""Posterior estimation with stochastic variational inference. We initialize the Diagonal Normal 
+distribution with median values, we use ADAM for optimization and ELBO as a loss function."""
 def train_vi(model, infer_args, rng_key, step_size=0.01, n_iterations = 2000):
 
   # set eval off to do inference 
@@ -144,15 +165,17 @@ def train_vi(model, infer_args, rng_key, step_size=0.01, n_iterations = 2000):
   return guide, svi, current_state, losses
 
 
+"""Function used to generate samples from the posterior approximated by VI. 
+Number of samples should be equal to MCMC."""
 def sample_vi(model, guide, svi, current_state, num_samples=2000):
 
-# let's get samples from this posterior, in the same format as the samples from the mcmc posterior
   model.eval = True
 
-  parameters = svi.get_params(current_state) # make sure that you understand what these parameters of the posterior mean (no pun intended)
+  parameters = svi.get_params(current_state)
 
   samples_vi_raw = []
 
+  # generate the same number of posterior samples as MCMC
   for i in range(num_samples):
       rng_key = jax.random.PRNGKey(i)
       samples_vi_raw.append(guide.sample_posterior(rng_key, parameters))
@@ -164,33 +187,44 @@ def sample_vi(model, guide, svi, current_state, num_samples=2000):
   return samples_vi
   
   
+"""Function used to approximate and derive samples from a posterior distribution 
+by using stochastic variational inference."""
 def train_sample_vi(model, infer_args, rng_key, step_size=0.01, n_iterations = 1000, num_samples=2000):
-#Train and get samples from VI
+  # aproxiamte posterior
   guide, svi, current_state, losses = train_vi(model, infer_args, rng_key, step_size, n_iterations)
-
+ 
+  # plot ELBO losses
   sns.lineplot(x = range(len(losses)), y = losses)
-
+  
+  # get the samples from the posterior
   samples_vi = sample_vi(model, guide, svi, current_state, num_samples)
   
   return samples_vi
   
   
-#Calculating Pearson correlation by comparing a set of distributions for a given model and gene
+""" Used to compute pearson correlations between parameter distributions for a given model and gene."""
 def mcmc_pearson_correlation(mcmc_models_dists, dataset, cor_threshold=0.5, p_threshold=0.05, save_path=''):
 
   str_log_list=[]
   count = 0
 
+  # for every model [nothing, linear, switch]
   for model in mcmc_models_dists:
+      
+    # for all possible pairs of parameters [dispersion, freq, beta, swtich]
     for index_1, dist_1 in enumerate(model[1]):
       for index_2, dist_2 in enumerate(model[1]):
         if index_2>index_1:
+          # for all genes
           for index_gene, gene_ix in enumerate(dataset.var['gene_ix']):
             count+=1
             samples_mcmc_1 = model[0]['transcriptome/'+dist_1][:, gene_ix]
             samples_mcmc_2 = model[0]['transcriptome/'+dist_2][:, gene_ix]
+            
+            # compute Pearson correlation between samples of the parameters
             pearson_cor = stats.pearsonr(samples_mcmc_1, samples_mcmc_2)
 
+            # accept correlation if thresholds are satisfied
             if (np.abs(pearson_cor[0])>=cor_threshold) and (pearson_cor[1]<=p_threshold):
               gene_ix_name = dataset.var.loc[dataset.var['gene_ix'] == gene_ix].index[0]
               str_log = f'{model[2]}, {dist_1} vs. {dist_2}, {gene_ix_name}: cor={pearson_cor[0]}, p={pearson_cor[1]}'
@@ -200,6 +234,7 @@ def mcmc_pearson_correlation(mcmc_models_dists, dataset, cor_threshold=0.5, p_th
   print(f'cor_threshold={cor_threshold} and p_threshold={p_threshold}')
   print(f'Pearson correlations found: {len(str_log_list)} out of {count} total combinations')
 
+  # save correlations to the specified folder
   if save_path != '':
     with open(save_path, 'w') as f:
         print(f"Log file saved in dir: {save_path}")
