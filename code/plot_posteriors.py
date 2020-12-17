@@ -1,3 +1,5 @@
+# This script contains functions to generate all the figures of the ./figures/ directory:
+
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,6 +8,8 @@ import seaborn as sns
 import scpyro
 
 
+"""This function returns samples for a specific model parameter 
+(i.e. freq) of a given gene (MCMC samples used)."""
 def get_dist_mcmc(name, gene_ix, samples_mcmc):
 
   dist_name = 'transcriptome/'+name
@@ -14,6 +18,8 @@ def get_dist_mcmc(name, gene_ix, samples_mcmc):
   return samples_mcmc_
 
 
+"""This function returns samples for a specific model parameter 
+(i.e. freq) of a given gene (MCMC and VI samples used)."""
 def get_dist(name, gene_ix, samples_mcmc, samples_vi):
 
   dist_name = 'transcriptome/'+name
@@ -23,19 +29,26 @@ def get_dist(name, gene_ix, samples_mcmc, samples_vi):
   return samples_mcmc_, samples_vi_
 
 
+"""This function creates a figure that visualizes the differences, for all genes, 
+between MCMCM and VI for a given parameter distribution (i.e. single parameter figures 
+of ./figures/set1/ directory). If save_path='' the figure is not saved."""
 def print_MCMC_VI_single_variable(dist_type, model_name, samples_mcmc, samples_vi, dataset, save_path='', nrows=6, ncols=5):
 
   fig, ax = plt.subplots(nrows, ncols, figsize=(16, 14))
   fig.suptitle(model_name+': MCMC vs. VI '+ dist_type+ ' distribution for different types of genes', fontsize=14)
   fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
+  # for each gene
   for index, gene_ix in enumerate(dataset.var['gene_ix']):
 
     axis_i = int(np.floor(index / (nrows-1)))
     axis_j = index % ncols
     # print(index, axis_i, axis_j)
+    
+    # get MCMC and VI samples for the given parameter
     samples_mcmc_, samples_vi_ = get_dist(dist_type, gene_ix, samples_mcmc, samples_vi)
     
+    # make the plot between MCMC and VI
     sns.kdeplot(samples_mcmc_, label = "MCMC", ax=ax[axis_i, axis_j]).set(ylabel=None)
     sns.kdeplot(samples_vi_, label = "VI", ax=ax[axis_i, axis_j]).set(ylabel=None)
     
@@ -51,22 +64,28 @@ def print_MCMC_VI_single_variable(dist_type, model_name, samples_mcmc, samples_v
   if save_path != '':
     fig.savefig(f"{save_path}/{model_name}/{model_name}_{dist_type.replace('/', '-')}.jpg", format= 'jpg', dpi=200)
     print(f"Figure saved in dir: {save_path}/{model_name}/{model_name}_{dist_type.replace('/', '-')}.jpg")
-
-
+    
+    
+"""This function creates a figure that visualizes the differences, for all genes, 
+between MCMCM and VI given two parameter distributions (i.e. two parameter figures 
+of ./figures/set1/ directory). If save_path='' the figure is not saved."""
 def print_MCMC_VI_two_variables(dist_type1, dist_type2, model_name, samples_mcmc, samples_vi, dataset, save_path='', nrows=6, ncols=5):
 
   fig, ax = plt.subplots(nrows, ncols, figsize=(16, 14))
   fig.suptitle(model_name+': MCMC vs. VI '+ dist_type1+ ' and '+ dist_type2 +' distributions for different types of genes', fontsize=14)
   fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-
+  
+  # for each gene
   for index, gene_ix in enumerate(dataset.var['gene_ix']):
 
     axis_i = int(np.floor(index / (nrows-1)))
     axis_j = index % ncols
-
+    
+    # get MCMC and VI samples for both parameters
     samples_mcmc_1, samples_vi_1 = get_dist(dist_type1, gene_ix, samples_mcmc, samples_vi)
     samples_mcmc_2, samples_vi_2 = get_dist(dist_type2, gene_ix, samples_mcmc, samples_vi)
 
+    # make the plot between MCMC and VI
     sns.kdeplot(samples_mcmc_1, samples_mcmc_2, label = "MCMC", ax=ax[axis_i, axis_j]).set(ylabel=None)
     sns.kdeplot(samples_vi_1, samples_vi_2, label = "VI", ax=ax[axis_i, axis_j]).set(ylabel=None)
     
@@ -84,17 +103,23 @@ def print_MCMC_VI_two_variables(dist_type1, dist_type2, model_name, samples_mcmc
     print(f"Figure saved in dir: {save_path}/{model_name}/{model_name}_{dist_type1.replace('/', '-')}_{dist_type2.replace('/', '-')}.jpg")
     
     
+"""This function creates a figure that visualizes the differences of a specific model parameter between
+all different models, for all genes (i.e. all figures of ./figures/set2/ directory). If save_path='' 
+the figure is not saved."""
 def print_compare_models_MCMC(dist_type, samples_mcmc_list, dataset, save_path='', nrows=6, ncols=5):
 
   fig, ax = plt.subplots(nrows, ncols, figsize=(16, 14))
   fig.suptitle('MCMC '+ dist_type+ ' distribution comparison for different models', fontsize=14)
   fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
+  # for all genes
   for index, gene_ix in enumerate(dataset.var['gene_ix']):
 
     axis_i = int(np.floor(index / (nrows-1)))
     axis_j = index % ncols
     # print(index, axis_i, axis_j)
+    
+    # for all models make the plot of a single parameter
     for samples_mcmc in samples_mcmc_list:
       samples_mcmc_ = get_dist_mcmc(dist_type, gene_ix, samples_mcmc[0])
       sns.kdeplot(samples_mcmc_, label = samples_mcmc[1], ax=ax[axis_i, axis_j]).set(ylabel=None)
@@ -113,17 +138,21 @@ def print_compare_models_MCMC(dist_type, samples_mcmc_list, dataset, save_path='
     print(f"Figure saved in dir: {save_path}/mcmc_all_models_{dist_type.replace('/', '-')}.jpg")
     
     
+"""This function creates a figure that visualizes the differences between the true rho and the rho 
+estimated by MCMC and VI for a given model and for all genes (i.e. rho estimation figures of 
+./figures/set1/ directory). If save_path=''the figure is not saved."""
 def rho_estimation(model_name, model, samples_mcmc, samples_vi, dataset, rng_key_, infer_args, save_path):
   
   model.eval = True
 
-  # to check out our model, we will see how gene expression depends on the perturbation
+  # to check out the model, we will see how gene expression depends on the perturbation
   # we do not care about the library so we just fix it to 100
   design = {
       "p":jnp.linspace(0, 1, 50),
       "library":jnp.array([100] * 50)
   }
 
+  # predict samples of MCMC and VI for a given converged model
   predictive_mcmc = numpyro.infer.Predictive(model.forward, samples_mcmc, return_sites = ["rho"])
   predictions_mcmc = predictive_mcmc(rng_key_, **design)
 
