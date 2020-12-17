@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: latento
+Version: 0.0.1
+Summary: Using pyro and torch for single-cell data
+Home-page: https://github.com/probabilistic-cell/latento
+Author: Wouter Saelens
+Author-email: wouter.saelens@gmail.com
+License: UNKNOWN
+Description: This package contains helper functions to make working with pyro and torch easier focused on single-cell data. These include distributions commonly found in single-cell data and linker functions to get the data into scanpy and anndata
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
