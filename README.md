@@ -12,11 +12,8 @@ We performed our experiments using Python version 3.6x.
 
 ## Packages 
 
- - Pytorch
- - NLTK
- - Sacremoses
- - boto3
- - Transformers (hugging face)
+ - Jax
+ - Numpyro
 
 ## Overview of architecture
 
